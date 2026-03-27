@@ -26,4 +26,10 @@ urlpatterns = [
     
     # ROTA SECUNDÁRIA: Caso queira acessar apenas a tabela isolada
     path('tabela/', views.tabela_classificacao, name='tabela_simples'),
+
+    # ROTA PARA O CALENDÁRIO DE JOGOS
+    path('jogos/', views.lista_jogos, name='lista_jogos'),
+
+    # ROTA PARA A ARTILHARIA COMPLETA
+    path('artilharia/', views.artilharia_completa, name='artilharia_completa'),
 ]

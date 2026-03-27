@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela de Classificação - Copa Área 7</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #121212; color: #ffffff; }
+        .table { background-color: #1e1e1e; color: #ffffff; border-color: #333; }
+        .table-striped>tbody>tr:nth-of-type(odd) { --bs-table-accent-bg: #252525; color: #ffffff; }
+        .img-escudo { width: 30px; height: 30px; object-fit: contain; margin-right: 10px; }
+        .header-tabela { background: linear-gradient(45deg, #1a1a1a, #333); padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container mt-5">
+    <div class="header-tabela text-center">
+        <h1>🏆 Classificação Geral</h1>
+        <p class="text-muted">Acompanhe o desempenho dos times na Copa Área 7</p>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Pos</th>
+                    <th>Time</th>
+                    <th class="text-center">P</th>
+                    <th class="text-center">J</th>
+                    <th class="text-center">V</th>
+                    <th class="text-center">E</th>
+                    <th class="text-center">D</th>
+                    <th class="text-center">GP</th>
+                    <th class="text-center">GC</th>
+                    <th class="text-center">SG</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for time in times %}
+                <tr>
+                    <td>{{ forloop.counter }}º</td>
+                    <td>
+                        {% if time.escudo %}
+                            <img src="{{ time.escudo }}" class="img-escudo" alt="Escudo">
+                        {% endif %}
+                        <strong>{{ time.nome }}</strong>
+                    </td>
+                    <td class="text-center fw-bold">{{ time.pontos }}</td>
+                    <td class="text-center">{{ time.vitorias|add:time.empates|add:time.derrotas }}</td>
+                    <td class="text-center">{{ time.vitorias }}</td>
+                    <td class="text-center">{{ time.empates }}</td>
+                    <td class="text-center">{{ time.derrotas }}</td>
+                    <td class="text-center">{{ time.gols_pro }}</td>
+                    <td class="text-center">{{ time.gols_contra }}</td>
+                    <td class="text-center">{{ time.saldo_gols }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center">Nenhum time cadastrado ainda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-4">
+        <a href="/" class="btn btn-outline-light">← Voltar para o Início</a>
+    </div>
+</div>
+
+</body>
+</html>

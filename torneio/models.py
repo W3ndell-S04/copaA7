@@ -6,7 +6,6 @@ class Time(models.Model):
     nome = models.CharField(max_length=100)
     escudo = models.URLField(max_length=500, null=True, blank=True)
     
-    # Estatísticas (campos brutos persistidos no banco)
     vitorias = models.PositiveIntegerField(default=0)
     empates = models.PositiveIntegerField(default=0)
     derrotas = models.PositiveIntegerField(default=0)
@@ -25,16 +24,11 @@ class Time(models.Model):
         return self.nome
 
     def atualizar_estatisticas(self):
-        """
-        Lógica Centralizada: Percorre todas as partidas do time 
-        (casa ou fora) e reconstrói os números do zero.
-        """
-        v = e = d = gp = gc = 0
-        
-        # Filtra todas as partidas onde este time participou
-        # Importamos Partida localmente para evitar importação circular
+        # Import local para evitar importação circular
         from .models import Partida
-        jogos = Partida.objects.filter(Q(time_casa=self) | Q(time_fora=self))
+        v = e = d = gp = gc = 0
+        # Apenas partidas finalizadas contam para a tabela
+        jogos = Partida.objects.filter(Q(time_casa=self) | Q(time_fora=self), finalizada=True)
 
         for p in jogos:
             if p.time_casa == self:
@@ -50,21 +44,11 @@ class Time(models.Model):
                 elif p.gols_fora < p.gols_casa: d += 1
                 else: e += 1
         
-        # Atualiza os campos e salva os novos valores recalculados
         self.vitorias = v
         self.empates = e
         self.derrotas = d
         self.gols_pro = gp
         self.gols_contra = gc
-        self.save()
-
-    def resetar_estatisticas(self):
-        """Zera manualmente os dados do time"""
-        self.vitorias = 0
-        self.empates = 0
-        self.derrotas = 0
-        self.gols_pro = 0
-        self.gols_contra = 0
         self.save()
 
 class Jogador(models.Model):
@@ -83,29 +67,61 @@ class Partida(models.Model):
     time_fora = models.ForeignKey(Time, on_delete=models.CASCADE, related_name='jogos_fora')
     gols_casa = models.PositiveIntegerField(default=0)
     gols_fora = models.PositiveIntegerField(default=0)
-    data_partida = models.DateTimeField(auto_now_add=True)
+    # Alterado para permitir agendar jogos no futuro
+    data_partida = models.DateTimeField(verbose_name="Data e Hora do Jogo")
+    finalizada = models.BooleanField(default=False, verbose_name="Partida Encerrada?")
+
+    class Meta:
+        ordering = ['data_partida']
+        verbose_name = "Partida"
+        verbose_name_plural = "Partidas"
 
     def clean(self):
-        """Trava de segurança: impede que um time jogue contra ele mesmo"""
         if self.time_casa == self.time_fora:
             raise ValidationError("Erro: O time da casa não pode ser o mesmo que o visitante.")
 
     def save(self, *args, **kwargs):
-        # Força a validação do método clean()
         self.full_clean()
         super().save(*args, **kwargs)
-        # Recalcula estatísticas para garantir integridade após salvar
+        # Atualiza a tabela sempre que uma partida é salva
         self.time_casa.atualizar_estatisticas()
         self.time_fora.atualizar_estatisticas()
 
     def delete(self, *args, **kwargs):
-        # Guarda a referência antes de sumir com a partida
         casa = self.time_casa
         fora = self.time_fora
         super().delete(*args, **kwargs)
-        # Recalcula os times agora que esta partida não existe mais no banco
         casa.atualizar_estatisticas()
         fora.atualizar_estatisticas()
 
     def __str__(self):
-        return f"{self.time_casa} {self.gols_casa} x {self.gols_fora} {self.time_fora}"
+        status = "[ENCERRADA]" if self.finalizada else "[AGENDADA]"
+        return f"{status} {self.time_casa} {self.gols_casa} x {self.gols_fora} {self.time_fora}"
+
+class ConfiguracaoGeral(models.Model):
+    titulo_torneio = models.CharField(max_length=100, default="Copa Área 7")
+    youtube_live_id = models.CharField(max_length=20, blank=True, help_text="ID do vídeo da LIVE")
+    playlist_id = models.CharField(max_length=100, blank=True, help_text="ID da Playlist")
+    esta_ao_vivo = models.BooleanField(default=False)
+    proxima_live = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Configuração Geral"
+        verbose_name_plural = "Configuração Geral"
+
+    def __str__(self):
+        return self.titulo_torneio
+
+class FotoGaleria(models.Model):
+    titulo = models.CharField(max_length=100, blank=True, verbose_name="Título/Legenda")
+    imagem_url = models.URLField(max_length=500)
+    link_post = models.URLField(max_length=500, blank=True)
+    ordem = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Foto da Galeria"
+        verbose_name_plural = "Galeria de Fotos"
+        ordering = ['ordem', '-id']
+
+    def __str__(self):
+        return self.titulo or f"Foto {self.id}"
